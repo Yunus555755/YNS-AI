@@ -1,0 +1,241 @@
+﻿<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>YNS AI Hub</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&display=swap');
+        body { font-family: 'Plus Jakarta+Sans', sans-serif; background-color: #0b0f19; color: #f3f4f6; }
+        ::-webkit-scrollbar { width: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #1f293d; border-radius: 3px; }
+    </style>
+</head>
+<body class="h-screen flex overflow-hidden">
+
+    <!-- Ana Uygulama -->
+    <div id="appContainer" class="flex w-full h-screen">
+        <!-- Sidebar -->
+        <div class="w-72 bg-[#111827] border-r border-gray-800/60 flex flex-col p-4">
+            <div class="flex items-center gap-3 px-2 mb-6">
+                <div class="w-9 h-9 bg-gradient-to-tr from-violet-600 to-cyan-400 rounded-xl flex items-center justify-center shadow-md">
+                    <span class="text-white font-bold text-sm">YNS</span>
+                </div>
+                <span class="font-bold text-lg text-white tracking-wide">YNS AI Hub</span>
+            </div>
+
+            <button onclick="yeniSohbetBaslat()" class="w-full bg-[#1f293d]/50 hover:bg-[#1f293d] border border-gray-800 text-gray-200 py-3 px-4 rounded-xl font-medium text-sm flex items-center gap-2.5 transition-colors mb-6 shadow-sm">
+                <span class="text-indigo-400 text-lg">+</span> Yeni Sohbet Başlat
+            </button>
+
+            <div class="text-xs font-semibold text-gray-500 uppercase tracking-wider px-2 mb-3">Geçmiş</div>
+            <div id="historyList" class="flex-1 overflow-y-auto space-y-1 pr-1"></div>
+
+            <div class="pt-4 border-t border-gray-800/60 flex items-center justify-between px-2">
+                <div class="flex items-center gap-2.5">
+                    <div class="w-8 h-8 rounded-full bg-indigo-600/20 text-indigo-400 flex items-center justify-center font-bold text-xs" id="userInitial">Y</div>
+                    <span class="text-sm font-medium text-gray-300 truncate max-w-[110px]" id="aktifKullaniciAdi">Yunus</span>
+                </div>
+            </div>
+        </div>
+
+        <!-- Chat Alanı -->
+        <div class="flex-1 flex flex-col bg-[#0b0f19] relative">
+            <div class="h-16 border-b border-gray-800/60 flex items-center justify-between px-6 bg-[#0b0f19]/80 backdrop-blur-md z-10">
+                <div class="flex items-center gap-3">
+                    <span class="font-semibold text-gray-200" id="aktifSohbetBaslik">Yeni Sohbet</span>
+                    <span class="w-2 h-2 rounded-full bg-emerald-500 inline-block"></span>
+                </div>
+                <span class="text-xs bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 px-3 py-1.5 rounded-full font-medium">Sistem Aktif</span>
+            </div>
+
+            <!-- Mesajlar Ekranı -->
+            <div id="chatMessages" class="flex-1 overflow-y-auto p-6 space-y-6">
+                <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center max-w-xl mx-auto">
+                    <div class="w-20 h-20 bg-gradient-to-tr from-violet-600 via-indigo-600 to-cyan-400 rounded-3xl flex items-center justify-center shadow-2xl shadow-indigo-600/30 mb-5">
+                        <span class="text-white font-black text-2xl tracking-wider">YNS</span>
+                    </div>
+                    <h2 class="text-3xl font-bold text-white mb-2" id="welcomeTitle">Naber Yunus?</h2>
+                    <p class="text-gray-400 text-sm">Matematik, oyun, spor, müzik... Ne yazarsan yaz, buradayım.</p>
+                </div>
+            </div>
+
+            <!-- Input Alanı -->
+            <div class="p-4 bg-[#0b0f19]">
+                <div class="max-w-3xl mx-auto bg-[#111827] border border-gray-800 rounded-2xl p-2.5 flex items-center gap-3 shadow-lg focus-within:border-indigo-500 transition-colors">
+                    <textarea id="userInput" rows="1" placeholder="Bir şeyler yaz..." class="flex-1 bg-transparent text-gray-200 px-3 py-1.5 text-sm focus:outline-none resize-none max-h-32" onkeydown="tusKontrol(event)"></textarea>
+                    <button onclick="mesajGonder()" class="w-10 h-10 bg-indigo-600 hover:bg-indigo-500 text-white rounded-xl flex items-center justify-center font-bold transition-all shadow-md shadow-indigo-600/30">↑</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        let currentUser = "Yunus";
+        let sohbetler = [{ id: Date.now(), baslik: "Yeni Sohbet", mesajlar: [] }];
+        let aktifSohbetId = sohbetler[0].id;
+
+        window.onload = function() {
+            gecmisiListele();
+            aktifSohbetiYukle();
+        }
+
+        function yeniSohbetBaslat() {
+            aktifSohbetId = Date.now();
+            sohbetler.unshift({ id: aktifSohbetId, baslik: "Yeni Sohbet", mesajlar: [] });
+            gecmisiListele();
+            aktifSohbetiYukle();
+        }
+
+        function gecmisiListele() {
+            let listEl = document.getElementById("historyList");
+            listEl.innerHTML = "";
+            sohbetler.forEach(s => {
+                let activeClass = s.id === aktifSohbetId ? "bg-[#1f293d] text-white font-medium" : "text-gray-400 hover:bg-[#111827] hover:text-gray-200";
+                let div = document.createElement("div");
+                div.className = `px-3 py-2.5 rounded-xl text-sm cursor-pointer truncate transition-colors ${activeClass}`;
+                div.innerText = s.baslik;
+                div.onclick = () => sohbetDegistir(s.id);
+                listEl.appendChild(div);
+            });
+        }
+
+        function sohbetDegistir(id) {
+            aktifSohbetId = id;
+            gecmisiListele();
+            aktifSohbetiYukle();
+        }
+
+        function aktifSohbetiYukle() {
+            let chatBox = document.getElementById("chatMessages");
+            chatBox.innerHTML = "";
+            let aktifSohbet = sohbetler.find(s => s.id === aktifSohbetId);
+            if (aktifSohbet) {
+                document.getElementById("aktifSohbetBaslik").innerText = aktifSohbet.baslik;
+            }
+            if (!aktifSohbet || aktifSohbet.mesajlar.length === 0) {
+                chatBox.innerHTML = `
+                    <div id="welcomeScreen" class="h-full flex flex-col items-center justify-center text-center max-w-xl mx-auto">
+                        <div class="w-20 h-20 bg-gradient-to-tr from-violet-600 via-indigo-600 to-cyan-400 rounded-3xl flex items-center justify-center shadow-2xl shadow-indigo-600/30 mb-5">
+                            <span class="text-white font-black text-2xl tracking-wider">YNS</span>
+                        </div>
+                        <h2 class="text-3xl font-bold text-white mb-2">Naber Yunus?</h2>
+                        <p class="text-gray-400 text-sm">Matematik, oyun, spor, müzik... Ne yazarsan yaz, buradayım.</p>
+                    </div>`;
+                return;
+            }
+            aktifSohbet.mesajlar.forEach(m => mesajDOMEkle(m.sender, m.text));
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function tusKontrol(e) {
+            if (e.key === 'Enter' && !e.shiftKey) { e.preventDefault(); mesajGonder(); }
+        }
+
+        function mesajGonder() {
+            let inputEl = document.getElementById("userInput");
+            let metin = inputEl.value.trim();
+            if (!metin) return;
+
+            let aktifSohbet = sohbetler.find(s => s.id === aktifSohbetId);
+            if (aktifSohbet.mesajlar.length === 0) {
+                aktifSohbet.baslik = metin.length > 25 ? metin.substring(0, 25) + "..." : metin;
+                document.getElementById("aktifSohbetBaslik").innerText = aktifSohbet.baslik;
+                gecmisiListele();
+            }
+
+            aktifSohbet.mesajlar.push({ sender: 'user', text: metin });
+            inputEl.value = "";
+            mesajDOMEkle('user', metin);
+            akilliCevapUret(metin);
+        }
+
+        function mesajDOMEkle(sender, text) {
+            let chatBox = document.getElementById("chatMessages");
+            let ws = document.getElementById("welcomeScreen");
+            if (ws) ws.remove();
+
+            let isUser = sender === 'user';
+            let rowDiv = document.createElement("div");
+            rowDiv.className = `flex items-start gap-3 max-w-3xl mx-auto w-full ${isUser ? "justify-end" : "justify-start"}`;
+
+            let avatar = document.createElement("div");
+            avatar.className = isUser ? 
+                "w-8 h-8 rounded-full bg-indigo-600 text-white flex items-center justify-center font-bold text-xs shrink-0" : 
+                "w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 to-cyan-400 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm";
+            avatar.innerText = isUser ? "Y" : "YNS";
+
+            let bubble = document.createElement("div");
+            bubble.className = `py-3 px-4 max-w-[80%] text-sm leading-relaxed whitespace-pre-line ${isUser ? "bg-indigo-600 text-white rounded-2xl rounded-tr-sm" : "bg-[#111827] border border-gray-800 text-gray-200 rounded-2xl rounded-tl-sm"}`;
+            bubble.innerText = text;
+
+            if (isUser) {
+                rowDiv.appendChild(bubble);
+                rowDiv.appendChild(avatar);
+            } else {
+                rowDiv.appendChild(avatar);
+                rowDiv.appendChild(bubble);
+            }
+
+            chatBox.appendChild(rowDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function akilliCevapUret(mesaj) {
+            let chatBox = document.getElementById("chatMessages");
+            let loadingId = "loading-" + Date.now();
+            
+            let loadDiv = document.createElement("div");
+            loadDiv.id = loadingId;
+            loadDiv.className = "flex items-start gap-3 max-w-3xl mx-auto w-full justify-start";
+            loadDiv.innerHTML = `
+                <div class="w-8 h-8 rounded-xl bg-gradient-to-tr from-violet-600 to-cyan-400 text-white flex items-center justify-center font-bold text-xs shrink-0 shadow-sm">YNS</div>
+                <div class="py-3 px-4 bg-[#111827] border border-gray-800 text-gray-400 rounded-2xl text-sm">Düşünüyor...</div>`;
+            chatBox.appendChild(loadDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            setTimeout(() => {
+                let el = document.getElementById(loadingId);
+                if (el) el.remove();
+
+                let yanit = cevapVer(mesaj);
+                let aktifSohbet = sohbetler.find(s => s.id === aktifSohbetId);
+                aktifSohbet.mesajlar.push({ sender: 'yns', text: yanit });
+                mesajDOMEkle('yns', yanit);
+            }, 400);
+        }
+
+        function cevapVer(m) {
+            let text = m.toLowerCase().trim();
+
+            // Matematik kontrolü
+            if (text.includes("kaç") || text.includes("+") || text.includes("-") || text.includes("*") || text.includes("/") || text.includes("hesapla")) {
+                try {
+                    let temizMat = text.replace(/[^0-9+\-*/().]/g, '');
+                    if (temizMat.length > 0) {
+                        let sonuc = Function('"use strict";return (' + temizMat + ')')();
+                        if (!isNaN(sonuc)) return `Sonuç: ${sonuc}`;
+                    }
+                } catch(e) {}
+            }
+
+            if (text.includes("selam") || text.includes("merhaba")) return "Aleykümselam Yunus, naber?";
+            if (text.includes("nasılsın") || text.includes("naber")) return "İyiyim valla, takılıyorum. Sen ne yapıyorsun?";
+            if (text.includes("oyun")) return "Oyunlar sarmaya devam mı? Hangi oyunu oynuyorsun şu aralar?";
+            if (text.includes("spor") || text.includes("futbol")) return "Futbol ve spor gündemi yoğun. Var mı takip ettiğin maç?";
+            if (text.includes("müzik") || text.includes("şarkı")) return "Müzik candır. Ne tarz dinliyorsun?";
+            if (text.includes("kod") || text.includes("yazılım")) return "Kodlama işleri nasıl gidiyor? Godot veya HTML'e devam mı?";
+
+            let rastgele = [
+                "Anladım Yunus, mantıklı. Başka ne eklemek istersin bununla ilgili?",
+                "O iş öyle valla. Detay vermek ister misin?",
+                "Haklısın, ona göre bir şeyler bakarız.",
+                "Tamamdır, kaydettim bunu. Başka ne konuşalım?"
+            ];
+            return rastgele[Math.floor(Math.random() * rastgele.length)];
+        }
+    </script>
+</body>
+</html>
